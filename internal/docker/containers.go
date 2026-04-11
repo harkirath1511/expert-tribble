@@ -187,7 +187,8 @@ func GetContainerStats(apiclient *client.Client, id string) {
 
 	preSystemCPUUsage, ok := utils.GetFloat(preCPUStats, "system_cpu_usage")
 	if !ok {
-		log.Fatal("precpu_stats.system_cpu_usage missing")
+		log.Println("precpu_stats.system_cpu_usage missing; cpu percentage will be 0 for this sample")
+		preSystemCPUUsage = systemCPUUsage
 	}
 
 	cpuDelta := totalUsage - preTotalUsage
@@ -217,4 +218,114 @@ func GetContainerStats(apiclient *client.Client, id string) {
 	fmt.Printf("system_cpu_delta: %.0f\n", systemCPUDelta)
 	fmt.Printf("number_cpus: %.0f\n", numberCPUs)
 	fmt.Printf("cpu_usage_pct: %.2f%%\n", cpuUsagePct)
+}
+
+//List all post/del func's for containers
+
+func StartContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerStart(context.Background(), id, client.ContainerStartOptions{})
+	if err != nil {
+		log.Fatal("Some err staring container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully started and running!!", id)
+}
+
+func StopContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerStop(context.Background(), id, client.ContainerStopOptions{})
+	if err != nil {
+		log.Fatal("Some err stopping container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully stopped!!", id)
+}
+
+func RestartContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerRestart(context.Background(), id, client.ContainerRestartOptions{})
+	if err != nil {
+		log.Fatal("Some err restaring container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully restarted!!", id)
+}
+
+func RenameContainer(apiclient *client.Client, id string, name string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerRename(context.Background(), id, client.ContainerRenameOptions{
+		NewName: name,
+	})
+	if err != nil {
+		log.Fatal("Some err renaming container : ", err)
+	}
+
+	fmt.Printf("Container successfully renamed to %s!!", name)
+}
+
+func PauseContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerPause(context.Background(), id, client.ContainerPauseOptions{})
+	if err != nil {
+		log.Fatal("Some err pausing container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully paused!, yay!", id)
+}
+
+func UnpauseContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerUnpause(context.Background(), id, client.ContainerUnpauseOptions{})
+	if err != nil {
+		log.Fatal("Some err unpausing container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully unpaused!", id)
+}
+
+func KillContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id")
+	}
+
+	_, err := apiclient.ContainerKill(context.Background(), id, client.ContainerKillOptions{})
+	if err != nil {
+		log.Fatal("Some err killing container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully killed!", id)
+}
+
+func DeleteContainer(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("You need to provide an id or name")
+	}
+
+	_, err := apiclient.ContainerRemove(context.Background(), id, client.ContainerRemoveOptions{
+		Force: true,
+	})
+	if err != nil {
+		log.Fatal("Some err deleting container : ", err)
+	}
+
+	fmt.Printf("Container with id %s successfully removed!", id)
 }
