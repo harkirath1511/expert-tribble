@@ -29,5 +29,9 @@ func main() {
 	//docker.KillContainer(apiClient, "1642268ca3eed9f736e6ce343b4dc8ff6f8d41f69797c5d5e4f9b3169de7cd60")
 	//docker.DeleteContainer(apiClient, "1642268ca3eed9f736e6ce343b4dc8ff6f8d41f69797c5d5e4f9b3169de7cd60")
 
-	docker.ListImages(apiClient)
+	//docker.ListImages(apiClient)
+	//docker.InspectImg(apiClient, "sha256:3cde66018e19cd9af6ae6dc4efd4d5174ffa73ade50ccc63fb6a710fc810d8b6")
+	//docker.SearchForImg(apiClient, "node")
+	//docker.DeleteImg(apiClient, "sha256:b8cf5e598b72087903acce6c5ca4292cf991a5dbc729f6e7f5783163117f5513")
+	docker.BuildImg(apiClient, "../..", "ai-docker-harkirat")
 }

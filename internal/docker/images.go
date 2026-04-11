@@ -1,21 +1,115 @@
 package docker
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/moby/moby/client"
 )
 
-func ListImages(apiclient *client.Client){
-	res, err := apiclient.ImageList(context.Background(), client.ImageListOptions{})
-	if err!=nil{
-		log.Fatal("Some err listing all imgs : ",err)
-	}
-	//var data map[string]any
+// get func's for images
 
-	data,_ := json.MarshalIndent(res, "", " ")
-	fmt.Println("Res : ",string(data))
+func ListImages(apiclient *client.Client) {
+	res, err := apiclient.ImageList(context.Background(), client.ImageListOptions{
+		Manifests: true,
+	})
+	if err != nil {
+		log.Fatal("Some err listing all imgs : ", err)
+	}
+
+	//data,_ := json.MarshalIndent(res, "", " ")
+
+	fmt.Println("Containers \t Created \t Id \t Size")
+
+	for _, img := range res.Items {
+		fmt.Println(img.Containers, "\t", img.Created, "\t", img.ID, "\t", img.Size)
+	}
+}
+
+func InspectImg(apiclient *client.Client, id string) {
+
+	if id == "" {
+		log.Fatal("Id or name is missing")
+	}
+
+	res, err := apiclient.ImageInspect(context.Background(), id)
+	if err != nil {
+		log.Fatal("Some err inspecting the img : ", err)
+	}
+
+	data, _ := json.MarshalIndent(res, "", " ")
+	fmt.Println(string(data))
+}
+
+func SearchForImg(apiclient *client.Client, name string) {
+
+	if name == "" {
+		log.Fatal("Name of img is missing")
+	}
+	res, err := apiclient.ImageSearch(context.Background(), name, client.ImageSearchOptions{})
+	if err != nil {
+		log.Fatal("Some err inspecting the img : ", err)
+	}
+
+	data, _ := json.MarshalIndent(res, "", " ")
+
+	fmt.Println("Res : ", string(data))
+}
+
+//post/del func's for images
+
+func DeleteImg(apiclient *client.Client, id string) {
+	if id == "" {
+		log.Fatal("Name or id of img is missing")
+	}
+	_, err := apiclient.ImageRemove(context.Background(), id, client.ImageRemoveOptions{})
+	if err != nil {
+		log.Fatal("Some err removing the img : ", err)
+	}
+
+	fmt.Println("Successfully removed img!")
+}
+
+func BuildImg(apiclient *client.Client, path string, tag string) {
+	root := filepath.Join(path, "internal", "docker")
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+	filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(root, p)
+		h, _ := tar.FileInfoHeader(info, "")
+		h.Name = filepath.ToSlash(rel)
+		_ = tw.WriteHeader(h)
+		f, _ := os.Open(p)
+		defer f.Close()
+		_, _ = io.Copy(tw, f)
+		return nil
+	})
+	_ = tw.Close()
+	tar := io.NopCloser(bytes.NewReader(buf.Bytes()))
+	defer tar.Close()
+
+	res, err := apiclient.ImageBuild(context.Background(), tar, client.ImageBuildOptions{
+		Dockerfile: "Dockerfile",
+		Remove:     true,
+		Tags:       []string{tag},
+	})
+	if err != nil {
+		log.Fatal("some err : ", err)
+	}
+
+	defer res.Body.Close()
+
+	io.Copy(os.Stdout, res.Body)
+
+	fmt.Println("The response : ", res)
 }
