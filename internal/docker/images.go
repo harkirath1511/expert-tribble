@@ -16,21 +16,14 @@ import (
 
 // get func's for images
 
-func ListImages(apiclient *client.Client) {
+func ListImages(apiclient *client.Client) client.ImageListResult {
 	res, err := apiclient.ImageList(context.Background(), client.ImageListOptions{
 		Manifests: true,
 	})
 	if err != nil {
 		log.Fatal("Some err listing all imgs : ", err)
 	}
-
-	//data,_ := json.MarshalIndent(res, "", " ")
-
-	fmt.Println("Containers \t Created \t Id \t Size")
-
-	for _, img := range res.Items {
-		fmt.Println(img.Containers, "\t", img.Created, "\t", img.ID, "\t", img.Size)
-	}
+	return res
 }
 
 func InspectImg(apiclient *client.Client, id string) {
@@ -112,4 +105,15 @@ func BuildImg(apiclient *client.Client, path string, tag string) {
 	io.Copy(os.Stdout, res.Body)
 
 	fmt.Println("The response : ", res)
+}
+
+func CreateImg(apiclient *client.Client, image string) {
+	res, err := apiclient.ImagePull(context.Background(), image, client.ImagePullOptions{})
+	if err != nil {
+		log.Fatal("Some err : ", err)
+	}
+	defer res.Close()
+
+	data, _ := io.Copy(os.Stdout, res)
+	fmt.Println("res : ", data)
 }

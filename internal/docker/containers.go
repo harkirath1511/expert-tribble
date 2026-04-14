@@ -13,7 +13,7 @@ import (
 
 //all needed get func's for containers
 
-func ListContainers(apiClient *client.Client) {
+func ListContainers(apiClient *client.Client) client.ContainerListResult {
 
 	res, err := apiClient.ContainerList(context.Background(), client.ContainerListOptions{
 		All: true,
@@ -22,11 +22,7 @@ func ListContainers(apiClient *client.Client) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%s  %-22s  %s\n", "ID", "STATUS", "IMAGE")
-
-	for _, ctr := range res.Items {
-		fmt.Printf("%s  %-22s  %s\n", ctr.ID, ctr.Status, ctr.Image)
-	}
+	return res
 }
 
 func InspectContainer(apiclient *client.Client, id string) {
