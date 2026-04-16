@@ -25,7 +25,7 @@ func ListContainers(apiClient *client.Client) client.ContainerListResult {
 	return res
 }
 
-func InspectContainer(apiclient *client.Client, id string) {
+func InspectContainer(apiclient *client.Client, id string) (client.ContainerInspectResult) {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -34,16 +34,7 @@ func InspectContainer(apiclient *client.Client, id string) {
 	if err != nil {
 		log.Fatal("some err in inspecting container: ", err)
 	}
-
-	fmt.Println("CONTAINER DETAILS : ")
-	fmt.Printf("Id : %s \n", res.Container.ID)
-	fmt.Printf("Created : %s \n", res.Container.Created)
-	fmt.Printf("Path : %s \n", res.Container.Path)
-	fmt.Printf("Img : %s \n", res.Container.Image)
-	fmt.Printf("Name : %s \n", res.Container.Name)
-	fmt.Printf("Platform : %s \n", res.Container.Platform)
-	fmt.Printf("Args : %s \n", res.Container.Args)
-	fmt.Println("State : ", res.Container.State)
+	return res
 }
 
 func ProcInsideContainer(apiclient *client.Client, id string) {

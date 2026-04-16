@@ -15,10 +15,11 @@ func main() {
 
 	defer apiClient.Close()
 
-	//containerRes := docker.ListContainers(apiClient)
-	//docker.FormatContainerList(containerRes)
+	// containerRes := docker.ListContainers(apiClient)
+	// docker.FormatContList(containerRes)
 
-	//docker.InspectContainer(apiClient, "1642268ca3eed9f736e6ce343b4dc8ff6f8d41f69797c5d5e4f9b3169de7cd60")
+	inspecRes := docker.InspectContainer(apiClient, "chatbot-backend-1")
+	docker.FormatContInspect(inspecRes)
 	//docker.ProcInsideContainer(apiClient, "1642268ca3eed9f736e6ce343b4dc8ff6f8d41f69797c5d5e4f9b3169de7cd60")
 	//docker.GetContainerLogs(apiClient, "1642268ca3eed9f736e6ce343b4dc8ff6f8d41f69797c5d5e4f9b3169de7cd60")
 	//docker.GetContainerStats(apiClient, "1642268ca3eed9f736e6ce343b4dc8ff6f8d41f69797c5d5e4f9b3169de7cd60")
