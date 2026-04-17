@@ -25,7 +25,7 @@ func ListContainers(apiClient *client.Client) client.ContainerListResult {
 	return res
 }
 
-func InspectContainer(apiclient *client.Client, id string) (client.ContainerInspectResult) {
+func InspectContainer(apiclient *client.Client, id string) client.ContainerInspectResult {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -37,20 +37,20 @@ func InspectContainer(apiclient *client.Client, id string) (client.ContainerInsp
 	return res
 }
 
-func ProcInsideContainer(apiclient *client.Client, id string) {
+func ProcInsideContainer(apiclient *client.Client, id string) client.ContainerTopResult {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
 
 	res, err := apiclient.ContainerTop(context.Background(), id, client.ContainerTopOptions{})
 	if err != nil {
-		log.Fatal("some err in inspecting container: ", err)
+		log.Fatal("some err : ", err)
 	}
 
-	fmt.Println(res.Processes)
+	return res
 }
 
-func GetContainerLogs(apiclient *client.Client, id string) {
+func GetContainerLogs(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -70,8 +70,7 @@ func GetContainerLogs(apiclient *client.Client, id string) {
 		log.Fatal("Some err : ", err)
 	}
 
-	fmt.Println("CONTAINER LOGS : ")
-	fmt.Println(string(data))
+	return string(data)
 
 }
 

@@ -31,14 +31,24 @@ type Image struct {
 	Created      string   `json:"created"`
 	Size         float64  `json:"size"`
 	Tags         []string `json:"tags"`
-	Containers   int      `json:"containers"`
+	ContCnt      int      `json:"contcnt"`
+	Container    []string `json:"containers,omitempty"`
 	OS           string   `json:"os,omitempty"`
 	Cmd          []string `json:"cmd"`
 	Entrypoint   []string `json:"entrypoint"`
 	ExposedPorts []string `json:"exposed_ports"`
 	EnvVars      []string `json:"env_vars"`
-	Architecture string   `json:"architecture"`
+	Architecture string   `json:"architecture,omitempty"`
 }
+
+type ImgSrch struct {
+	Description string `json:"desc,omitempty"`
+	IsOfficial  bool   `json:"isofficial"`
+	Name        string `json:"name"`
+	StarCnt     int    `json:"starcnt"`
+}
+
+//Container funcs
 
 func FormatContList(containerList client.ContainerListResult) (string, error) {
 
@@ -121,6 +131,42 @@ func FormatContInspect(ctr client.ContainerInspectResult) (string, error) {
 	return string(jsonByte), nil
 }
 
+func FormatContLogs(data string) string {
+	maxChars := 3000
+
+	if len(data) <= maxChars {
+		fmt.Println("Logs : ", data)
+		return data
+	}
+
+	fmt.Println("reduced Logs : ", data[len(data)-maxChars:])
+	return "...RLOeduced Length logs...\n" + data[len(data)-maxChars:]
+}
+
+func FormatProcRes(rawData client.ContainerTopResult) string {
+
+	res := make(map[string]string)
+
+	titles := rawData.Titles
+	proc := rawData.Processes
+
+	if len(titles) > 0 && len(proc) > 0 {
+		for i := 0; i < len(titles); i++ {
+			res[titles[i]] = fmt.Sprintf("%s , %s", proc[0][i], proc[1][i])
+		}
+	}
+
+	jsonBytes, err := json.MarshalIndent(res, "", " ")
+	if err != nil {
+		log.Fatal("Some err : ", err)
+	}
+
+	fmt.Println("res : ", string(jsonBytes))
+	return string(jsonBytes)
+}
+
+//Imgs funcs
+
 func FormatImgList(images client.ImageListResult) (string, error) {
 	if len(images.Items) == 0 {
 		fmt.Println("Empty args provided!")
@@ -130,23 +176,20 @@ func FormatImgList(images client.ImageListResult) (string, error) {
 	var res []Image
 
 	for _, img := range images.Items {
+		var imgTags []string
 
-		tags := "unknown"
-		if len(img.RepoTags) > 0 {
-			tags = img.RepoTags[0]
+		if len(img.RepoTags) > 3 {
+			imgTags = append(imgTags, string(img.RepoTags[0]), string(img.RepoTags[1]), string(img.RepoTags[3]))
 		}
 
 		rawId := strings.TrimPrefix(img.ID, "sha256:")
-		if len(rawId) > 12 {
-			rawId = rawId[:12]
-		}
 
 		res = append(res, Image{
-			ID:         rawId,
-			Created:    strconv.FormatInt(img.Created, 10),
-			Size:       float64(img.Size) / 1024 / 1024,
-			Tag:        tags,
-			Containers: int(img.Containers),
+			ID:      rawId,
+			Created: strconv.FormatInt(img.Created, 10),
+			Size:    float64(img.Size) / 1024 / 1024,
+			Tags:    imgTags,
+			ContCnt: int(img.Containers),
 		})
 	}
 
@@ -166,21 +209,70 @@ func FormatImgInspect(img client.ImageInspectResult) (string, error) {
 	var imgTags []string
 
 	if len(img.RepoTags) > 3 {
-		for _, tags := range img.RepoTags {
-			imgTags = append(imgTags, string(tags[0]), string(tags[1]), string(tags[3]))
-			break
-		}
+		imgTags = append(imgTags, string(img.RepoTags[0]), string(img.RepoTags[1]), string(img.RepoTags[3]))
+	}
+
+	var exposedPorts []string
+
+	for _, ports := range img.Config.ExposedPorts {
+		exposedPorts = append(exposedPorts, fmt.Sprintf("%s , ", ports))
+	}
+
+	var containers = []string{""}
+
+	if len(img.Manifests) > 0 {
+		containers = img.Manifests[0].ImageData.Containers
 	}
 
 	res = Image{
-		ID:         img.ID,
-		Created:    img.Created,
-		Size:       float64(img.Size),
-		Tags:       imgTags,
-		Containers: img.Manifests[0].ImageData.Containers,
-		OS:         img.Os,
-		Cmd:        img.Config.Cmd,
-		EnvVars:    img.Config.Env,
+		ID:           img.ID,
+		Created:      img.Created,
+		Size:         float64(img.Size),
+		Tags:         imgTags,
+		Container:    containers,
+		OS:           img.Os,
+		Cmd:          img.Config.Cmd,
+		Entrypoint:   img.Config.Entrypoint,
+		ExposedPorts: exposedPorts,
+		EnvVars:      img.Config.Env,
 	}
 
+	jsonBytes, err := json.MarshalIndent(res, "", " ")
+	if err != nil {
+		log.Fatal("There's some err : ", err)
+	}
+
+	fmt.Println("Res -> ", string(jsonBytes))
+
+	return string(jsonBytes), nil
+}
+
+func FormatImgSrchRes(imgRes client.ImageSearchResult) (string, error) {
+
+	var topRes []ImgSrch
+
+	for cnt, res := range imgRes.Items {
+		
+		if cnt>5 {
+			break
+		}
+
+		el := ImgSrch{
+			Description: res.Description,
+			IsOfficial:  res.IsOfficial,
+			Name:        res.Name,
+			StarCnt:     res.StarCount,
+		}
+
+		topRes = append(topRes, el)
+	}
+
+	jsonByte, err := json.MarshalIndent(topRes, "", " ")
+	if err != nil {
+		log.Fatal("there's some err : ", err)
+	}
+
+	fmt.Println("res : ", string(jsonByte))
+
+	return string(jsonByte), nil
 }

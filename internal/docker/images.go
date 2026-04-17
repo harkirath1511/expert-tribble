@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -26,7 +25,7 @@ func ListImages(apiclient *client.Client) client.ImageListResult {
 	return res
 }
 
-func InspectImg(apiclient *client.Client, id string) {
+func InspectImg(apiclient *client.Client, id string) client.ImageInspectResult {
 
 	if id == "" {
 		log.Fatal("Id or name is missing")
@@ -37,11 +36,10 @@ func InspectImg(apiclient *client.Client, id string) {
 		log.Fatal("Some err inspecting the img : ", err)
 	}
 
-	data, _ := json.MarshalIndent(res, "", " ")
-	fmt.Println(string(data))
+	return res
 }
 
-func SearchForImg(apiclient *client.Client, name string) {
+func SearchForImg(apiclient *client.Client, name string) client.ImageSearchResult {
 
 	if name == "" {
 		log.Fatal("Name of img is missing")
@@ -51,9 +49,7 @@ func SearchForImg(apiclient *client.Client, name string) {
 		log.Fatal("Some err inspecting the img : ", err)
 	}
 
-	data, _ := json.MarshalIndent(res, "", " ")
-
-	fmt.Println("Res : ", string(data))
+	return res
 }
 
 //post/del func's for images
