@@ -3,7 +3,6 @@ package docker
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/netip"
 	"strconv"
 	"strings"
@@ -54,7 +53,7 @@ func FormatContList(containerList client.ContainerListResult) (string, error) {
 
 	if len(containerList.Items) == 0 {
 		fmt.Println("Empty args provided!")
-		return "[]", nil
+		return "[]", fmt.Errorf("No args provided")
 	}
 
 	var res []Container
@@ -77,7 +76,7 @@ func FormatContList(containerList client.ContainerListResult) (string, error) {
 
 	jsonBytes, err := json.MarshalIndent(res, "", " ")
 	if err != nil {
-		log.Fatal("some err : ", err)
+		return "", fmt.Errorf("Marshler err : ", err)
 	}
 
 	fmt.Println("RES : ", string(jsonBytes))
@@ -123,7 +122,7 @@ func FormatContInspect(ctr client.ContainerInspectResult) (string, error) {
 
 	jsonByte, err := json.MarshalIndent(container, "", " ")
 	if err != nil {
-		log.Fatal("Some err :( -> ", err)
+		return "", fmt.Errorf("Marshler err : ", err)
 	}
 
 	fmt.Println(string(jsonByte))
@@ -131,19 +130,19 @@ func FormatContInspect(ctr client.ContainerInspectResult) (string, error) {
 	return string(jsonByte), nil
 }
 
-func FormatContLogs(data string) string {
+func FormatContLogs(data string) (string, error) {
 	maxChars := 3000
 
 	if len(data) <= maxChars {
 		fmt.Println("Logs : ", data)
-		return data
+		return data, nil
 	}
 
 	fmt.Println("reduced Logs : ", data[len(data)-maxChars:])
-	return "...RLOeduced Length logs...\n" + data[len(data)-maxChars:]
+	return "...RLOeduced Length logs...\n" + data[len(data)-maxChars:], nil
 }
 
-func FormatProcRes(rawData client.ContainerTopResult) string {
+func FormatProcRes(rawData client.ContainerTopResult) (string, error) {
 
 	res := make(map[string]string)
 
@@ -158,11 +157,11 @@ func FormatProcRes(rawData client.ContainerTopResult) string {
 
 	jsonBytes, err := json.MarshalIndent(res, "", " ")
 	if err != nil {
-		log.Fatal("Some err : ", err)
+		return "", fmt.Errorf("Marshler err : ", err)
 	}
 
 	fmt.Println("res : ", string(jsonBytes))
-	return string(jsonBytes)
+	return string(jsonBytes), nil
 }
 
 //Imgs funcs
@@ -170,7 +169,7 @@ func FormatProcRes(rawData client.ContainerTopResult) string {
 func FormatImgList(images client.ImageListResult) (string, error) {
 	if len(images.Items) == 0 {
 		fmt.Println("Empty args provided!")
-		return "[]", nil
+		return "[]", fmt.Errorf("No args provided!")
 	}
 
 	var res []Image
@@ -195,7 +194,7 @@ func FormatImgList(images client.ImageListResult) (string, error) {
 
 	jsonByte, err := json.MarshalIndent(res, "", " ")
 	if err != nil {
-		log.Fatal("Somer err : ", err)
+		return "", fmt.Errorf("Marshler err : ", err)
 	}
 
 	fmt.Println("RES : ", string(jsonByte))
@@ -239,7 +238,7 @@ func FormatImgInspect(img client.ImageInspectResult) (string, error) {
 
 	jsonBytes, err := json.MarshalIndent(res, "", " ")
 	if err != nil {
-		log.Fatal("There's some err : ", err)
+		return "", fmt.Errorf("Marshler err : ", err)
 	}
 
 	fmt.Println("Res -> ", string(jsonBytes))
@@ -252,8 +251,8 @@ func FormatImgSrchRes(imgRes client.ImageSearchResult) (string, error) {
 	var topRes []ImgSrch
 
 	for cnt, res := range imgRes.Items {
-		
-		if cnt>5 {
+
+		if cnt > 5 {
 			break
 		}
 
@@ -269,7 +268,7 @@ func FormatImgSrchRes(imgRes client.ImageSearchResult) (string, error) {
 
 	jsonByte, err := json.MarshalIndent(topRes, "", " ")
 	if err != nil {
-		log.Fatal("there's some err : ", err)
+		return "", fmt.Errorf("Marshler err : ", err)
 	}
 
 	fmt.Println("res : ", string(jsonByte))

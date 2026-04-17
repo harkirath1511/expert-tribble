@@ -74,7 +74,7 @@ func GetContainerLogs(apiclient *client.Client, id string) string {
 
 }
 
-func GetContainerStats(apiclient *client.Client, id string) {
+func GetContainerStats(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -204,24 +204,26 @@ func GetContainerStats(apiclient *client.Client, id string) {
 	fmt.Printf("system_cpu_delta: %.0f\n", systemCPUDelta)
 	fmt.Printf("number_cpus: %.0f\n", numberCPUs)
 	fmt.Printf("cpu_usage_pct: %.2f%%\n", cpuUsagePct)
+
+	return ""
 }
 
 //List all post/del func's for containers
 
-func StartContainer(apiclient *client.Client, id string) {
+func StartContainer(apiclient *client.Client, id string) string {
 	if id == "" {
-		log.Fatal("You need to provide an id")
+		log.Fatal("I need an id or name")
 	}
 
 	_, err := apiclient.ContainerStart(context.Background(), id, client.ContainerStartOptions{})
 	if err != nil {
-		log.Fatal("Some err staring container : ", err)
+		log.Fatal("err : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully started and running!!", id)
+	return "Container with id " + id + " successfully started and running!!"
 }
 
-func StopContainer(apiclient *client.Client, id string) {
+func StopContainer(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -231,10 +233,10 @@ func StopContainer(apiclient *client.Client, id string) {
 		log.Fatal("Some err stopping container : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully stopped!!", id)
+	return "Container with" + id + "successfully stopped!!"
 }
 
-func RestartContainer(apiclient *client.Client, id string) {
+func RestartContainer(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -244,10 +246,10 @@ func RestartContainer(apiclient *client.Client, id string) {
 		log.Fatal("Some err restaring container : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully restarted!!", id)
+	return "Container with " + id + " successfully restarted!!"
 }
 
-func RenameContainer(apiclient *client.Client, id string, name string) {
+func RenameContainer(apiclient *client.Client, id string, name string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -259,10 +261,10 @@ func RenameContainer(apiclient *client.Client, id string, name string) {
 		log.Fatal("Some err renaming container : ", err)
 	}
 
-	fmt.Printf("Container successfully renamed to %s!!", name)
+	return "Container successfully renamed to " + name
 }
 
-func PauseContainer(apiclient *client.Client, id string) {
+func PauseContainer(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -272,10 +274,10 @@ func PauseContainer(apiclient *client.Client, id string) {
 		log.Fatal("Some err pausing container : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully paused!, yay!", id)
+	return "Container with " + id + " successfully paused!, yay!"
 }
 
-func UnpauseContainer(apiclient *client.Client, id string) {
+func UnpauseContainer(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -285,10 +287,10 @@ func UnpauseContainer(apiclient *client.Client, id string) {
 		log.Fatal("Some err unpausing container : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully unpaused!", id)
+	return "Container with " + id + " successfully unpaused!"
 }
 
-func KillContainer(apiclient *client.Client, id string) {
+func KillContainer(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id")
 	}
@@ -298,10 +300,10 @@ func KillContainer(apiclient *client.Client, id string) {
 		log.Fatal("Some err killing container : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully killed!", id)
+	return "Container with " + " successfully killed!"
 }
 
-func DeleteContainer(apiclient *client.Client, id string) {
+func DeleteContainer(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("You need to provide an id or name")
 	}
@@ -313,5 +315,5 @@ func DeleteContainer(apiclient *client.Client, id string) {
 		log.Fatal("Some err deleting container : ", err)
 	}
 
-	fmt.Printf("Container with id %s successfully removed!", id)
+	return "Container with " + id + " successfully removed!"
 }

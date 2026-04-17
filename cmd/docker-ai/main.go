@@ -43,9 +43,9 @@ func main() {
 	// inspectImg := docker.InspectImg(apiClient, "sha256:e35e37cf82b6894049e69e168e1135cbc2a084f3b63bdccc7908afff1bdc57d6")
 	// docker.FormatImgInspect(inspectImg)
 
-	srchRes := docker.SearchForImg(apiClient, "node")
-	docker.FormatImgSrchRes(srchRes)
-	
+	// srchRes := docker.SearchForImg(apiClient, "node")
+	// docker.FormatImgSrchRes(srchRes)
+
 	//docker.DeleteImg(apiClient, "sha256:b8cf5e598b72087903acce6c5ca4292cf991a5dbc729f6e7f5783163117f5513")
 	//docker.BuildImg(apiClient, "../..", "ai-docker-harkirat")
 	//docker.CreateImg(apiClient, "alpine")
