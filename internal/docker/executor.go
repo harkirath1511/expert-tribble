@@ -6,7 +6,7 @@ import (
 	"github.com/moby/moby/client"
 )
 
-func Execute(cli *client.Client, name string, args map[string]interface{}, apiClient *client.Client) (string, error) {
+func Execute(apiClient *client.Client, name string, args map[string]any) (string, error) {
 	tools, exists := DockerTools[name]
 	if !exists {
 		return "", fmt.Errorf("ai requested unknown tool: %s", name)

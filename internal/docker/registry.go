@@ -13,7 +13,8 @@ type Tool struct {
 
 var DockerTools = map[string]Tool{
 	"list_containers": Tool{
-		Name: "list_containers",
+		Name:        "list_containers",
+		Description: "List all Docker containers with their basic information",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			containerRes := ListContainers(apiClient)
 			res, err := FormatContList(containerRes)
@@ -24,7 +25,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"inspect_container": Tool{
-		Name: "inspect_container",
+		Name:        "inspect_container",
+		Description: "Get detailed information about a specific container including configuration and state",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -40,7 +42,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"container_processes": Tool{
-		Name: "container_processes",
+		Name:        "container_processes",
+		Description: "List all running processes inside a specific container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -56,7 +59,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"container_logs": Tool{
-		Name: "container_logs",
+		Name:        "container_logs",
+		Description: "Retrieve and display logs from a specific container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -72,7 +76,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"container_stats": Tool{
-		Name: "container_stats",
+		Name:        "container_stats",
+		Description: "Display live resource usage statistics for a specific container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -84,7 +89,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"start_container": Tool{
-		Name: "start_container",
+		Name:        "start_container",
+		Description: "Start a stopped container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -97,7 +103,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"stop_container": Tool{
-		Name: "stop_container",
+		Name:        "stop_container",
+		Description: "Stop a running container gracefully",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -110,7 +117,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"restart_container": Tool{
-		Name: "restart_container",
+		Name:        "restart_container",
+		Description: "Restart a running or stopped container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -123,7 +131,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"rename_container": Tool{
-		Name: "rename_container",
+		Name:        "rename_container",
+		Description: "Rename an existing container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			oldName, err := utils.GetArg(args, "oldName")
 			if err != nil {
@@ -141,7 +150,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"pause_container": Tool{
-		Name: "pause_container",
+		Name:        "pause_container",
+		Description: "Pause all processes in a running container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -154,7 +164,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"unpause_container": Tool{
-		Name: "unpause_container",
+		Name:        "unpause_container",
+		Description: "Resume a paused container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -167,7 +178,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"kill_container": Tool{
-		Name: "kill_container",
+		Name:        "kill_container",
+		Description: "Forcefully stop a running container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -180,7 +192,8 @@ var DockerTools = map[string]Tool{
 		},
 	},
 	"delete_container": Tool{
-		Name: "delete_container",
+		Name:        "delete_container",
+		Description: "Remove a container",
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -189,6 +202,101 @@ var DockerTools = map[string]Tool{
 
 			res := DeleteContainer(apiClient, name)
 
+			return res, nil
+		},
+	},
+
+	//img funcs
+	"list_images": Tool{
+		Name:        "list_images",
+		Description: "List all Docker images available on the local machine",
+		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
+			imgRes := ListImages(apiClient)
+
+			res, err := FormatImgList(imgRes)
+			if err != nil {
+				return "", err
+			}
+			return res, nil
+		},
+	},
+	"inspect_image": Tool{
+		Name:        "inspect_image",
+		Description: "Inspect a Docker image and return its detailed metadata",
+		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
+			name, err := utils.GetArg(args, "name")
+			if err != nil {
+				return "", err
+			}
+
+			imgRes := InspectImg(apiClient, name)
+			res, err2 := FormatImgInspect(imgRes)
+			if err2 != nil {
+				return "", err2
+			}
+
+			return res, nil
+		},
+	},
+	"search_image": Tool{
+		Name:        "search_image",
+		Description: "Search Docker Hub or configured registries for images matching a name",
+		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
+			name, err := utils.GetArg(args, "name")
+			if err != nil {
+				return "", err
+			}
+
+			imgRes := SearchForImg(apiClient, name)
+			res, err2 := FormatImgSrchRes(imgRes)
+			if err2 != nil {
+				return "", err2
+			}
+
+			return res, nil
+		},
+	},
+	"delete_image": Tool{
+		Name:        "delete_image",
+		Description: "Remove a Docker image from the local machine",
+		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
+			name, err := utils.GetArg(args, "name")
+			if err != nil {
+				return "", err
+			}
+
+			res := DeleteImg(apiClient, name)
+			return res, nil
+		},
+	},
+	"build_image": Tool{
+		Name:        "build_image",
+		Description: "Build a Docker image from a Dockerfile in the provided path and tag it",
+		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
+			path, err := utils.GetArg(args, "path")
+			if err != nil {
+				return "", err
+			}
+
+			tag, err := utils.GetArg(args, "tag")
+			if err != nil {
+				return "", err
+			}
+
+			res := BuildImg(apiClient, path, tag)
+			return res, nil
+		},
+	},
+	"create_image": Tool{
+		Name:        "create_image",
+		Description: "Pull a Docker image from a registry using its image reference",
+		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
+			name, err := utils.GetArg(args, "name")
+			if err != nil {
+				return "", err
+			}
+
+			res := CreateImg(apiClient, name)
 			return res, nil
 		},
 	},

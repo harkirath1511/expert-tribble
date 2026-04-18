@@ -4,11 +4,12 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"fmt"
+	"encoding/json"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/moby/moby/client"
 )
@@ -54,7 +55,7 @@ func SearchForImg(apiclient *client.Client, name string) client.ImageSearchResul
 
 //post/del func's for images
 
-func DeleteImg(apiclient *client.Client, id string) {
+func DeleteImg(apiclient *client.Client, id string) string {
 	if id == "" {
 		log.Fatal("Name or id of img is missing")
 	}
@@ -63,10 +64,10 @@ func DeleteImg(apiclient *client.Client, id string) {
 		log.Fatal("Some err removing the img : ", err)
 	}
 
-	fmt.Println("Successfully removed img!")
+	return "Successfully removed img with id :" + id
 }
 
-func BuildImg(apiclient *client.Client, path string, tag string) {
+func BuildImg(apiclient *client.Client, path string, tag string) string {
 	root := filepath.Join(path, "internal", "docker")
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
@@ -100,10 +101,11 @@ func BuildImg(apiclient *client.Client, path string, tag string) {
 
 	io.Copy(os.Stdout, res.Body)
 
-	fmt.Println("The response : ", res)
+	jsonByte, _ := json.MarshalIndent(res.Body, "", " ")
+	return string(jsonByte)
 }
 
-func CreateImg(apiclient *client.Client, image string) {
+func CreateImg(apiclient *client.Client, image string) string {
 	res, err := apiclient.ImagePull(context.Background(), image, client.ImagePullOptions{})
 	if err != nil {
 		log.Fatal("Some err : ", err)
@@ -111,5 +113,5 @@ func CreateImg(apiclient *client.Client, image string) {
 	defer res.Close()
 
 	data, _ := io.Copy(os.Stdout, res)
-	fmt.Println("res : ", data)
+	return "Pulled img successfully!! idk res : " + strconv.FormatInt(data, 10)
 }
