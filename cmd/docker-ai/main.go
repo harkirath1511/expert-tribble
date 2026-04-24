@@ -4,9 +4,15 @@ import (
 	"log"
 
 	"github.com/harkirath1511/docker-cli/internal/docker"
+	"github.com/harkirath1511/docker-cli/internal/llm"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	apiClient, err := docker.Init()
 	if err != nil {
@@ -14,6 +20,8 @@ func main() {
 	}
 
 	defer apiClient.Close()
+
+	llm.GenerateRes("Hello , hi there!")
 
 	// containerRes := docker.ListContainers(apiClient)
 	// docker.FormatContList(containerRes)

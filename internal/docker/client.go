@@ -16,7 +16,7 @@ func Init() (*client.Client, error) {
 		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
-		log.Fatal("Noo there is was an err : ", err)
+		log.Fatal("Noo there was an err : ", err)
 	}
 
 	res, err := apiClient.Ping(context.TODO(), client.PingOptions{
