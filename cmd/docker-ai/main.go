@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/harkirath1511/docker-cli/internal/docker"
 	"github.com/harkirath1511/docker-cli/internal/llm"
+	"github.com/harkirath1511/docker-cli/internal/tools"
 	"github.com/joho/godotenv"
 )
 
@@ -21,7 +23,56 @@ func main() {
 
 	defer apiClient.Close()
 
-	llm.GenerateRes("Hello , hi there!")
+	ai, err := llm.NewGeminiClient()
+	if err != nil {
+		log.Fatal("Some err : ", err)
+	}
+
+	history := []llm.Message{
+		{Role: "user", Content: "Run my container with name minikube"},
+	}
+
+	toolsDef := tools.GetToolDefs()
+
+	for {
+		fmt.Println("Thinking!!.....")
+
+		resp, err := ai.GenerateResponse(history, toolsDef)
+		if err != nil {
+			log.Fatal("some err in gen res : ", err)
+		}
+
+		if len(resp.ToolCalls) > 0 {
+			toolCall := resp.ToolCalls[0]
+			fmt.Printf("🎯 AI wants to call: %s with args: %v\n", toolCall.Function, toolCall.Arguments)
+
+			// 7. Try to Execute it!
+			result, err := docker.Execute(apiClient, toolCall.Function, toolCall.Arguments)
+			if err != nil {
+				fmt.Printf("❌ Execution Error: %v\n", err)
+				history = append(history, llm.Message{
+					Role:    "tool",
+					Content: fmt.Sprintf("error executing tool: %v", err),
+				})
+			} else {
+				fmt.Printf("✅ Execution Success: %s\n", result)
+				history = append(history, llm.Message{
+					Role:    "tool",
+					Content: result,
+					ToolCalls: []llm.ToolCall{
+						{
+							ID:        toolCall.ID,
+							Function:  toolCall.Function,
+							Arguments: toolCall.Arguments,
+						},
+					},
+				})
+			}
+		} else {
+			fmt.Printf("💬 AI says: %s\n", resp.Text)
+			break
+		}
+	}
 
 	// containerRes := docker.ListContainers(apiClient)
 	// docker.FormatContList(containerRes)
