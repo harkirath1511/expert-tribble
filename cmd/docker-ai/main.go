@@ -46,7 +46,7 @@ func main() {
 			toolCall := resp.ToolCalls[0]
 			fmt.Printf("🎯 AI wants to call: %s with args: %v\n", toolCall.Function, toolCall.Arguments)
 
-			// 7. Try to Execute it!
+			// 7. Try to Execute it!	
 			result, err := docker.Execute(apiClient, toolCall.Function, toolCall.Arguments)
 			if err != nil {
 				fmt.Printf("❌ Execution Error: %v\n", err)

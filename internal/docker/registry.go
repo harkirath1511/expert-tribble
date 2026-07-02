@@ -11,7 +11,7 @@ type Tool struct {
 	Execute     func(apiClient *client.Client, args map[string]interface{}) (string, error)
 }
 
-var DockerTools = map[string]Tool{
+ var DockerTools = map[string]Tool{
 	"list_containers": Tool{
 		Name:        "list_containers",
 		Description: "List all Docker containers with their basic information",

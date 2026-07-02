@@ -20,6 +20,7 @@ func ListImages(apiclient *client.Client) client.ImageListResult {
 	res, err := apiclient.ImageList(context.Background(), client.ImageListOptions{
 		Manifests: true,
 	})
+	
 	if err != nil {
 		log.Fatal("Some err listing all imgs : ", err)
 	}
