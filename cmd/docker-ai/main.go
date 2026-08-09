@@ -23,13 +23,17 @@ func main() {
 
 	defer apiClient.Close()
 
-	ai, err := llm.NewGeminiClient()
+	ai, err := llm.NewGroqClient()
 	if err != nil {
 		log.Fatal("Some err : ", err)
 	}
 
 	history := []llm.Message{
-		{Role: "user", Content: "Run my container with name minikube"},
+		{
+			Role:    "system",
+			Content: "You are a Docker assistant that helps users manage Docker containers and images. Use the provided tools to interact with Docker. Always use tool calls (function calls) to perform Docker operations - never write out function calls as text or XML. When a task is complete, provide a brief summary to the user.",
+		},
+		{Role: "user", Content: "Can u create a dockerfile for to run minkube container directly from it?"},
 	}
 
 	toolsDef := tools.GetToolDefs()
@@ -46,13 +50,28 @@ func main() {
 			toolCall := resp.ToolCalls[0]
 			fmt.Printf("🎯 AI wants to call: %s with args: %v\n", toolCall.Function, toolCall.Arguments)
 
-			// 7. Try to Execute it!	
+			history = append(history, llm.Message{
+				Role:    "assistant",
+				Content: "",
+				ToolCalls: []llm.ToolCall{
+					{
+						ID:        toolCall.ID,
+						Function:  toolCall.Function,
+						Arguments: toolCall.Arguments,
+					},
+				},
+			})
+
+			// 7. Try to Execute it!
 			result, err := docker.Execute(apiClient, toolCall.Function, toolCall.Arguments)
 			if err != nil {
 				fmt.Printf("❌ Execution Error: %v\n", err)
 				history = append(history, llm.Message{
 					Role:    "tool",
 					Content: fmt.Sprintf("error executing tool: %v", err),
+					ToolCalls: []llm.ToolCall{
+						{ID: toolCall.ID},
+					},
 				})
 			} else {
 				fmt.Printf("✅ Execution Success: %s\n", result)
@@ -60,17 +79,14 @@ func main() {
 					Role:    "tool",
 					Content: result,
 					ToolCalls: []llm.ToolCall{
-						{
-							ID:        toolCall.ID,
-							Function:  toolCall.Function,
-							Arguments: toolCall.Arguments,
-						},
+						{ID: toolCall.ID},
 					},
 				})
 			}
 		} else {
 			fmt.Printf("💬 AI says: %s\n", resp.Text)
 			break
+			history = append(history, llm.Message{})
 		}
 	}
 

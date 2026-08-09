@@ -1,17 +1,20 @@
 package docker
 
 import (
+	"github.com/harkirath1511/docker-cli/internal/llm"
 	"github.com/harkirath1511/docker-cli/internal/utils"
 	"github.com/moby/moby/client"
 )
 
 type Tool struct {
-	Name        string `json:"name"`
-	Description string `json:"desc"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"desc"`
+	Params      map[string]llm.ToolParam `json:"params,omitempty"`
+	Required    []string                 `json:"required,omitempty"`
 	Execute     func(apiClient *client.Client, args map[string]interface{}) (string, error)
 }
 
- var DockerTools = map[string]Tool{
+var DockerTools = map[string]Tool{
 	"list_containers": Tool{
 		Name:        "list_containers",
 		Description: "List all Docker containers with their basic information",
@@ -27,6 +30,13 @@ type Tool struct {
 	"inspect_container": Tool{
 		Name:        "inspect_container",
 		Description: "Get detailed information about a specific container including configuration and state",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to inspect",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -44,6 +54,13 @@ type Tool struct {
 	"container_processes": Tool{
 		Name:        "container_processes",
 		Description: "List all running processes inside a specific container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to check for processes",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -61,6 +78,13 @@ type Tool struct {
 	"container_logs": Tool{
 		Name:        "container_logs",
 		Description: "Retrieve and display logs from a specific container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to fetch logs from",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -78,6 +102,13 @@ type Tool struct {
 	"container_stats": Tool{
 		Name:        "container_stats",
 		Description: "Display live resource usage statistics for a specific container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to fetch statistics for",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -91,6 +122,13 @@ type Tool struct {
 	"start_container": Tool{
 		Name:        "start_container",
 		Description: "Start a stopped container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to start",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -105,6 +143,13 @@ type Tool struct {
 	"stop_container": Tool{
 		Name:        "stop_container",
 		Description: "Stop a running container gracefully",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to stop",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -119,6 +164,13 @@ type Tool struct {
 	"restart_container": Tool{
 		Name:        "restart_container",
 		Description: "Restart a running or stopped container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to restart",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -133,6 +185,17 @@ type Tool struct {
 	"rename_container": Tool{
 		Name:        "rename_container",
 		Description: "Rename an existing container",
+		Params: map[string]llm.ToolParam{
+			"oldName": {
+				Type:        "string",
+				Description: "The current name or ID of the container",
+			},
+			"newName": {
+				Type:        "string",
+				Description: "The new name to set for the container",
+			},
+		},
+		Required: []string{"oldName", "newName"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			oldName, err := utils.GetArg(args, "oldName")
 			if err != nil {
@@ -152,6 +215,13 @@ type Tool struct {
 	"pause_container": Tool{
 		Name:        "pause_container",
 		Description: "Pause all processes in a running container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to pause",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -166,6 +236,13 @@ type Tool struct {
 	"unpause_container": Tool{
 		Name:        "unpause_container",
 		Description: "Resume a paused container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to unpause/resume",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -180,6 +257,13 @@ type Tool struct {
 	"kill_container": Tool{
 		Name:        "kill_container",
 		Description: "Forcefully stop a running container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to kill",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -194,6 +278,13 @@ type Tool struct {
 	"delete_container": Tool{
 		Name:        "delete_container",
 		Description: "Remove a container",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the container to remove",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -223,6 +314,13 @@ type Tool struct {
 	"inspect_image": Tool{
 		Name:        "inspect_image",
 		Description: "Inspect a Docker image and return its detailed metadata",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the image to inspect",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -241,6 +339,13 @@ type Tool struct {
 	"search_image": Tool{
 		Name:        "search_image",
 		Description: "Search Docker Hub or configured registries for images matching a name",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name of the image to search for",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -259,6 +364,13 @@ type Tool struct {
 	"delete_image": Tool{
 		Name:        "delete_image",
 		Description: "Remove a Docker image from the local machine",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name or ID of the image to delete",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {
@@ -272,6 +384,17 @@ type Tool struct {
 	"build_image": Tool{
 		Name:        "build_image",
 		Description: "Build a Docker image from a Dockerfile in the provided path and tag it",
+		Params: map[string]llm.ToolParam{
+			"path": {
+				Type:        "string",
+				Description: "The path containing the Dockerfile",
+			},
+			"tag": {
+				Type:        "string",
+				Description: "The tag to apply to the built image",
+			},
+		},
+		Required: []string{"path", "tag"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			path, err := utils.GetArg(args, "path")
 			if err != nil {
@@ -290,6 +413,13 @@ type Tool struct {
 	"create_image": Tool{
 		Name:        "create_image",
 		Description: "Pull a Docker image from a registry using its image reference",
+		Params: map[string]llm.ToolParam{
+			"name": {
+				Type:        "string",
+				Description: "The name of the image to pull (e.g. 'ubuntu:latest')",
+			},
+		},
+		Required: []string{"name"},
 		Execute: func(apiClient *client.Client, args map[string]interface{}) (string, error) {
 			name, err := utils.GetArg(args, "name")
 			if err != nil {

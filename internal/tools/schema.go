@@ -12,8 +12,8 @@ func GetToolDefs() []llm.ToolDef {
 		def := llm.ToolDef{
 			Name:        tool.Name,
 			Description: tool.Description,
-			Params:      make(map[string]llm.ToolParam),
-			Required:    []string{},
+			Params:      tool.Params,
+			Required:    tool.Required,
 		}
 
 		toolDefs = append(toolDefs, def)

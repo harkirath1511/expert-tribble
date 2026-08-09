@@ -197,15 +197,13 @@ func GetContainerStats(apiclient *client.Client, id string) string {
 		cpuUsagePct = (cpuDelta / systemCPUDelta) * numberCPUs * 100.0
 	}
 
-	fmt.Printf("used_memory: %.0f bytes\n", usedMemory)
-	fmt.Printf("available_memory: %.0f bytes\n", availableMemory)
-	fmt.Printf("memory_usage_pct: %.2f%%\n", memoryUsagePct)
-	fmt.Printf("cpu_delta: %.0f\n", cpuDelta)
-	fmt.Printf("system_cpu_delta: %.0f\n", systemCPUDelta)
-	fmt.Printf("number_cpus: %.0f\n", numberCPUs)
-	fmt.Printf("cpu_usage_pct: %.2f%%\n", cpuUsagePct)
+	result := fmt.Sprintf(
+		"used_memory: %.0f bytes\navailable_memory: %.0f bytes\nmemory_usage_pct: %.2f%%\ncpu_delta: %.0f\nsystem_cpu_delta: %.0f\nnumber_cpus: %.0f\ncpu_usage_pct: %.2f%%",
+		usedMemory, availableMemory, memoryUsagePct,
+		cpuDelta, systemCPUDelta, numberCPUs, cpuUsagePct,
+	)
 
-	return ""
+	return result
 }
 
 //List all post/del func's for containers
