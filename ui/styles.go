@@ -3,101 +3,72 @@ package ui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	// Colors
-	colorPurple  = lipgloss.Color("#7C3AED")
-	colorCyan    = lipgloss.Color("#06B6D4")
-	colorYellow  = lipgloss.Color("#F59E0B")
-	colorGreen   = lipgloss.Color("#10B981")
-	colorRed     = lipgloss.Color("#EF4444")
-	colorGray    = lipgloss.Color("#6B7280")
-	colorWhite   = lipgloss.Color("#F9FAFB")
-	colorBg      = lipgloss.Color("#0F0F1A")
-	colorBorder  = lipgloss.Color("#2D2D4E")
-	colorHeader  = lipgloss.Color("#1A1A2E")
+	// ── 3-color palette ───────────────────────────────────────────────────────
+	colorAccent  = lipgloss.Color("#60A5FA") // subtle blue — prompt & app name only
+	colorText    = lipgloss.Color("#D1D5DB") // primary text — user & AI messages
+	colorDim     = lipgloss.Color("#4B5563") // muted — hints, tool output, status
+	colorVeryDim = lipgloss.Color("#374151") // separator lines
 
-	// Header bar
-	HeaderStyle = lipgloss.NewStyle().
-			Background(colorHeader).
-			Foreground(colorCyan).
-			Bold(true).
-			Padding(0, 2)
-
-	HeaderTitleStyle = lipgloss.NewStyle().
-				Foreground(colorCyan).
-				Bold(true)
-
-	HeaderSubStyle = lipgloss.NewStyle().
-			Foreground(colorGray)
-
-	// Chat viewport
+	// ── Viewport (no border, just padding) ───────────────────────────────────
 	ViewportStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(colorBorder).
-			Padding(0, 1)
+			PaddingLeft(2)
 
-	// Message styles
-	UserLabelStyle = lipgloss.NewStyle().
-			Foreground(colorPurple).
+	// ── User message ─────────────────────────────────────────────────────────
+	UserPromptStyle = lipgloss.NewStyle().
+			Foreground(colorAccent).
 			Bold(true)
 
 	UserMsgStyle = lipgloss.NewStyle().
-			Foreground(colorWhite)
+			Foreground(colorText)
 
-	AILabelStyle = lipgloss.NewStyle().
-			Foreground(colorCyan).
-			Bold(true)
-
+	// ── AI message ───────────────────────────────────────────────────────────
 	AIMsgStyle = lipgloss.NewStyle().
-			Foreground(colorWhite)
+			Foreground(colorText)
 
-	// Tool call styles
-	ToolLabelStyle = lipgloss.NewStyle().
-			Foreground(colorYellow).
-			Bold(true)
+	// ── Tool call ────────────────────────────────────────────────────────────
+	ToolPrefixStyle = lipgloss.NewStyle().
+			Foreground(colorDim)
 
-	ToolNameStyle = lipgloss.NewStyle().
-			Foreground(colorYellow)
+	ToolResultStyle = lipgloss.NewStyle().
+			Foreground(colorDim)
 
-	ToolArgStyle = lipgloss.NewStyle().
-			Foreground(colorGray).
-			Italic(true)
+	// ── Error ────────────────────────────────────────────────────────────────
+	ErrorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#9CA3AF"))
 
-	ToolSuccessStyle = lipgloss.NewStyle().
-				Foreground(colorGreen)
-
-	ToolErrorStyle = lipgloss.NewStyle().
-			Foreground(colorRed)
-
-	// Spinner / thinking
+	// ── Thinking indicator ───────────────────────────────────────────────────
 	ThinkingStyle = lipgloss.NewStyle().
-			Foreground(colorCyan).
-			Italic(true)
+			Foreground(colorDim).
+			PaddingLeft(2)
 
-	// Input bar
+	// ── Input bar — textarea sits between two separator lines ────────────────
 	InputBarStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(colorPurple).
-			Padding(0, 1)
+			PaddingLeft(1)
 
 	InputPromptStyle = lipgloss.NewStyle().
-				Foreground(colorPurple).
+				Foreground(colorAccent).
 				Bold(true)
 
-	// Status bar
+	// ── Status bar ───────────────────────────────────────────────────────────
 	StatusStyle = lipgloss.NewStyle().
-			Background(colorHeader).
-			Foreground(colorGray).
-			Padding(0, 2)
+			Foreground(colorVeryDim).
+			PaddingLeft(2).
+			PaddingRight(2)
 
-	StatusReadyStyle = lipgloss.NewStyle().
-				Foreground(colorGreen).
-				Bold(true)
+	StatusTextStyle = lipgloss.NewStyle().
+			Foreground(colorDim)
 
-	StatusBusyStyle = lipgloss.NewStyle().
-			Foreground(colorYellow).
-			Bold(true)
+	// ── Welcome / empty state ────────────────────────────────────────────────
+	WelcomeTitleStyle = lipgloss.NewStyle().
+				Foreground(colorAccent).
+				Bold(true).
+				PaddingLeft(2)
 
-	// Divider
-	DimStyle = lipgloss.NewStyle().
-			Foreground(colorGray)
+	WelcomeHintStyle = lipgloss.NewStyle().
+				Foreground(colorDim).
+				PaddingLeft(2)
+
+	// ── Separator ────────────────────────────────────────────────────────────
+	SeparatorStyle = lipgloss.NewStyle().
+			Foreground(colorVeryDim)
 )

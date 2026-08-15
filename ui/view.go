@@ -13,62 +13,51 @@ func (m Model) View() string {
 		return "\n  Initialising...\n"
 	}
 
-	return strings.Join([]string{
-		m.renderHeader(),
-		m.renderViewport(),
-		m.renderThinking(),
-		m.renderInput(),
-		m.renderStatus(),
-	}, "\n")
+	sep := SeparatorStyle.Render(strings.Repeat("─", m.width))
+
+	var sections []string
+	sections = append(sections, m.renderViewport())
+
+	if m.thinking {
+		sections = append(sections, m.renderThinking())
+	}
+
+	// input box: ─────────── / textarea / ───────────
+	sections = append(sections, sep)
+	sections = append(sections, m.renderInput())
+	sections = append(sections, sep)
+	sections = append(sections, m.renderStatus())
+
+	return strings.Join(sections, "\n")
 }
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 
-func (m Model) renderHeader() string {
-	title := HeaderTitleStyle.Render("🐳 Docker AI")
-	hint := HeaderSubStyle.Render("  ctrl+c to quit · ctrl+l to clear")
-	content := lipgloss.JoinHorizontal(lipgloss.Top, title, hint)
-	return HeaderStyle.Width(m.width).Render(content)
-}
-
 func (m Model) renderViewport() string {
-	return ViewportStyle.
-		Width(m.width - 2).
-		Height(m.viewport.Height).
-		Render(m.viewport.View())
+	return ViewportStyle.Render(m.viewport.View())
 }
 
 func (m Model) renderThinking() string {
-	if !m.thinking {
-		return ""
-	}
-	return "  " + m.spinner.View() + ThinkingStyle.Render(" Thinking...")
+	return ThinkingStyle.Render(m.spinner.View() + " Thinking...")
 }
 
 func (m Model) renderInput() string {
-	return InputBarStyle.
-		Width(m.width - 2).
-		Render(m.input.View())
+	return InputBarStyle.Render(m.input.View())
 }
 
 func (m Model) renderStatus() string {
-	var status string
-	if m.thinking {
-		status = StatusBusyStyle.Render("● busy")
-	} else {
-		status = StatusReadyStyle.Render("● " + m.statusMsg)
-	}
+	hint := StatusTextStyle.Render("? for shortcuts · ctrl+c to quit · enter to send · shift+enter for newline")
+	provider := StatusTextStyle.Render(m.statusMsg)
 
-	scrollPct := fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100)
-	scroll := DimStyle.Render(scrollPct)
-
-	gap := m.width - lipgloss.Width(status) - lipgloss.Width(scroll) - 4
+	hintW := lipgloss.Width(hint)
+	provW := lipgloss.Width(provider)
+	gap := m.width - hintW - provW - 4
 	if gap < 0 {
 		gap = 0
 	}
 
 	return StatusStyle.Width(m.width).Render(
-		status + strings.Repeat(" ", gap) + scroll,
+		hint + strings.Repeat(" ", gap) + provider,
 	)
 }
 
@@ -77,13 +66,18 @@ func (m Model) renderStatus() string {
 // renderEntries converts all ChatEntry items into a single string for the viewport
 func (m Model) renderEntries() string {
 	if len(m.entries) == 0 {
-		return DimStyle.Render("\n  Start by asking something — e.g. \"list my containers\" or \"start nginx\"\n")
+		return strings.Join([]string{
+			"",
+			WelcomeTitleStyle.Render("Docker AI"),
+			"",
+			WelcomeHintStyle.Render(`Ask about your containers — e.g. "list my containers" or "stop nginx"`),
+			"",
+		}, "\n")
 	}
 
 	var sb strings.Builder
 	for _, e := range m.entries {
 		sb.WriteString(renderEntry(e))
-		sb.WriteString("\n")
 	}
 	return sb.String()
 }
@@ -91,20 +85,26 @@ func (m Model) renderEntries() string {
 func renderEntry(e ChatEntry) string {
 	switch e.Role {
 	case RoleUser:
-		label := UserLabelStyle.Render("  You")
+		prompt := UserPromptStyle.Render(">")
 		msg := UserMsgStyle.Render(e.Content)
-		return fmt.Sprintf("%s\n  %s\n", label, msg)
+		return fmt.Sprintf("%s %s\n\n", prompt, msg)
 
 	case RoleAI:
-		label := AILabelStyle.Render("  🤖 Docker AI")
 		msg := AIMsgStyle.Render(e.Content)
-		return fmt.Sprintf("%s\n  %s\n", label, msg)
+		lines := strings.Split(msg, "\n")
+		var indented []string
+		for _, l := range lines {
+			indented = append(indented, "  "+l)
+		}
+		return strings.Join(indented, "\n") + "\n\n"
 
 	case RoleTool:
-		return ToolNameStyle.Render(e.Content) + "\n"
+		prefix := ToolPrefixStyle.Render("  ⎿ ")
+		content := ToolResultStyle.Render(e.Content)
+		return prefix + content + "\n"
 
 	case RoleError:
-		return ToolErrorStyle.Render("  " + e.Content) + "\n"
+		return ErrorStyle.Render("  ✗ "+e.Content) + "\n"
 
 	default:
 		return e.Content + "\n"

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,7 +20,7 @@ type Model struct {
 
 	// sub-components
 	viewport viewport.Model
-	input    textinput.Model
+	input    textarea.Model
 	spinner  spinner.Model
 
 	// chat display history
@@ -37,23 +37,40 @@ type Model struct {
 	// flags
 	thinking  bool
 	ready     bool   // viewport initialised?
-	statusMsg string // shown in the status bar
+	statusMsg string // shown right-side of status bar
 }
 
 // NewModel creates and wires up the initial model
 func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
-	// text input
-	ti := textinput.New()
-	ti.Placeholder = "Ask me anything about your Docker setup..."
-	ti.Focus()
-	ti.CharLimit = 500
-	ti.PromptStyle = InputPromptStyle
-	ti.Prompt = " ❯ "
+	// textarea — expandable, no border (we draw our own separator lines)
+	ta := textarea.New()
+	ta.Placeholder = "Ask anything..."
+	ta.Focus()
+	ta.CharLimit = 2000
+	ta.ShowLineNumbers = false
+	ta.EndOfBufferCharacter = 0 // hide the ~ end-of-buffer marker
+	ta.SetHeight(1)             // starts at 1 line, grows with content
+	ta.MaxHeight = 6            // max 6 lines before it scrolls internally
 
-	// spinner
+	// Strip bubble's default borders — we use separator lines in view.go instead
+	noStyle := lipgloss.NewStyle()
+	ta.FocusedStyle.Base = noStyle
+	ta.FocusedStyle.CursorLine = noStyle
+	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(colorDim)
+	ta.FocusedStyle.Text = lipgloss.NewStyle().Foreground(colorText)
+	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(colorAccent)
+	ta.BlurredStyle.Base = noStyle
+	ta.BlurredStyle.CursorLine = noStyle
+	ta.BlurredStyle.Placeholder = lipgloss.NewStyle().Foreground(colorDim)
+	ta.BlurredStyle.Text = lipgloss.NewStyle().Foreground(colorDim)
+	ta.BlurredStyle.Prompt = lipgloss.NewStyle().Foreground(colorDim)
+
+	ta.Prompt = "> "
+
+	// spinner — minimal dot, dim color
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#06B6D4"))
+	sp.Style = lipgloss.NewStyle().Foreground(colorDim)
 
 	// system message seeds the conversation
 	history := []llm.Message{
@@ -64,21 +81,21 @@ func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
 	}
 
 	return Model{
-		input:        ti,
+		input:        ta,
 		spinner:      sp,
 		ai:           ai,
 		dockerClient: dockerClient,
 		llmHistory:   history,
 		toolsDef:     tools.GetToolDefs(),
-		statusMsg:    "Ready",
+		statusMsg:    "Groq · llama-3.3-70b",
 	}
 }
 
 // Init is called once on startup — start the spinner tick
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
-		textinput.Blink,
+		textarea.Blink,
 		m.spinner.Tick,
-		docker.PingCmd(m.dockerClient), // confirm docker is alive
+		docker.PingCmd(m.dockerClient),
 	)
 }
