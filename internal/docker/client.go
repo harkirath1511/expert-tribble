@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/moby/moby/client"
 )
@@ -16,17 +15,16 @@ func Init() (*client.Client, error) {
 		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
-		log.Fatal("Noo there was an err : ", err)
+		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
 
-	res, err := apiClient.Ping(context.TODO(), client.PingOptions{
+	_, err = apiClient.Ping(context.TODO(), client.PingOptions{
 		NegotiateAPIVersion: true,
 	})
 	if err != nil {
-		log.Fatal("Noo there is an err : ", err)
+		return nil, fmt.Errorf("docker daemon unreachable: %w\n\nIs Docker Desktop running?", err)
 	}
 
-	fmt.Println("RESULT : ", res)
-	fmt.Println("Success!")
 	return apiClient, nil
 }
+
