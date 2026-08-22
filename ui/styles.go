@@ -68,7 +68,30 @@ var (
 				Foreground(colorDim).
 				PaddingLeft(2)
 
-	
 	SeparatorStyle = lipgloss.NewStyle().
 			Foreground(colorVeryDim)
+
+	// HITL approval styles
+	colorWarning = lipgloss.Color("#F59E0B") // amber
+	colorGreen   = lipgloss.Color("#10B981")
+	colorRed     = lipgloss.Color("#EF4444")
+
+	ApprovalCardStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(colorWarning).
+				Foreground(colorWarning).
+				Padding(1, 2).
+				MarginLeft(2)
+
+	ApprovalGivenStyle = lipgloss.NewStyle().
+				Foreground(colorGreen).
+				Bold(true)
+
+	ApprovalDeniedStyle = lipgloss.NewStyle().
+				Foreground(colorRed).
+				Bold(true)
+
+	ApprovalPromptStyle = lipgloss.NewStyle().
+				Foreground(colorWarning).
+				Bold(true)
 )

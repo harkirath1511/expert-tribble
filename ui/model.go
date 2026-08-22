@@ -34,10 +34,14 @@ type Model struct {
 	ai           *llm.GroqClient
 	dockerClient *client.Client
 
-	
-	thinking  bool
-	ready     bool   
-	statusMsg string 
+	// flags
+	thinking         bool
+	ready            bool
+	statusMsg        string
+
+	// HITL state
+	awaitingApproval bool
+	pendingToolCalls []ToolCallMsg // entire batch held until user decides
 }
 
 

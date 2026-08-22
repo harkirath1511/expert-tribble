@@ -38,6 +38,10 @@ func (m Model) renderThinking() string {
 }
 
 func (m Model) renderInput() string {
+	if m.awaitingApproval {
+		prompt := ApprovalPromptStyle.Render("  Y  approve   ·   N  deny  ")
+		return InputBarStyle.Render(prompt)
+	}
 	return InputBarStyle.Render(m.input.View())
 }
 
@@ -99,7 +103,19 @@ func renderEntry(e ChatEntry) string {
 	case RoleError:
 		return ErrorStyle.Render("  ✗ "+e.Content) + "\n"
 
+	case RoleApprovalRequest:
+		// Yellow bordered warning card
+		card := ApprovalCardStyle.Render(e.Content)
+		return "\n" + card + "\n\n"
+
+	case RoleApprovalGiven:
+		return ApprovalGivenStyle.Render("  ✓ "+e.Content) + "\n\n"
+
+	case RoleApprovalDenied:
+		return ApprovalDeniedStyle.Render("  ✗ "+e.Content) + "\n\n"
+
 	default:
 		return e.Content + "\n"
 	}
 }
+

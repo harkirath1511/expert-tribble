@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/harkirath1511/docker-cli/internal/docker"
 	"github.com/harkirath1511/docker-cli/internal/llm"
+	"github.com/harkirath1511/docker-cli/internal/tools"
 	"github.com/moby/moby/client"
 )
 
@@ -26,32 +27,71 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	
 	case tea.KeyMsg:
+		// ── HITL approval mode — swallow all keys except Y and N ────────────
+		if m.awaitingApproval {
+			switch msg.String() {
+
+			case "y", "Y":
+				// User approved the entire batch — execute all pending tool calls
+				m.awaitingApproval = false
+				m.thinking = true
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleApprovalGiven,
+					Content: "Approved — executing...",
+				})
+				m.syncViewport()
+				for _, tc := range m.pendingToolCalls {
+					cmds = append(cmds, executeTool(m.dockerClient, tc))
+				}
+				m.pendingToolCalls = nil
+
+			case "n", "N", "esc":
+				// User denied — send a "denied" tool result back to AI for every call
+				m.awaitingApproval = false
+				m.thinking = true
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleApprovalDenied,
+					Content: "Denied — telling AI to stop.",
+				})
+				m.syncViewport()
+				for _, tc := range m.pendingToolCalls {
+					m.llmHistory = append(m.llmHistory, llm.Message{
+						Role:    "tool",
+						Content: "Action was denied by the user. Do not retry this operation.",
+						ToolCalls: []llm.ToolCall{
+							{ID: tc.ID},
+						},
+					})
+				}
+				m.pendingToolCalls = nil
+				cmds = append(cmds, callAI(m.ai, m.llmHistory, m.toolsDef))
+			}
+			// swallow all other keys while awaiting approval
+			return m, tea.Batch(cmds...)
+		}
+
+		// ── Normal input mode ────────────────────────────────────────────────
 		switch msg.Type {
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 
-		
 		case tea.KeyEnter:
 			text := strings.TrimSpace(m.input.Value())
 			if text == "" || m.thinking {
 				break
 			}
 			m.input.Reset()
-			
 			m = m.recalcLayout()
 
-			
 			m.entries = append(m.entries, ChatEntry{Role: RoleUser, Content: text})
 			m.syncViewport()
 
-			
 			m.llmHistory = append(m.llmHistory, llm.Message{Role: "user", Content: text})
 			m.thinking = true
 			cmds = append(cmds, callAI(m.ai, m.llmHistory, m.toolsDef))
 
 		case tea.KeyCtrlL:
-			
 			m.entries = nil
 			m.syncViewport()
 		}
@@ -78,7 +118,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	
 	case AIResponseMsg:
 		if msg.Text != "" {
-			
+			// Final text reply from AI — show it and stop the loop
 			m.entries = append(m.entries, ChatEntry{Role: RoleAI, Content: msg.Text})
 			m.llmHistory = append(m.llmHistory, llm.Message{Role: "assistant", Content: msg.Text})
 			m.thinking = false
@@ -86,13 +126,64 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		
+		// ── Scan the entire batch for sensitive tools (Option B) ──────────────
+		var sensitiveLines []string
+		for _, tc := range msg.ToolCalls {
+			if reason, yes := tools.IsSensitive(tc.Function); yes {
+				sensitiveLines = append(sensitiveLines,
+					fmt.Sprintf("  ⚠  %-22s  %s", tc.Function, reason),
+				)
+			}
+		}
+
+		if len(sensitiveLines) > 0 {
+			// At least one tool is sensitive — pause the whole batch
+			m.awaitingApproval = true
+			m.thinking = false
+			m.pendingToolCalls = msg.ToolCalls
+
+			// First append all tool calls as assistant history so the
+			// conversation stays valid regardless of Y/N outcome
+			for _, tc := range msg.ToolCalls {
+				m.llmHistory = append(m.llmHistory, llm.Message{
+					Role:    "assistant",
+					Content: "",
+					ToolCalls: []llm.ToolCall{
+						{ID: tc.ID, Function: tc.Function, Arguments: tc.Args},
+					},
+				})
+			}
+
+			// Build the approval card content
+			var cardLines []string
+			cardLines = append(cardLines, "AI wants to run the following operations:")
+			cardLines = append(cardLines, "")
+			for _, tc := range msg.ToolCalls {
+				if reason, yes := tools.IsSensitive(tc.Function); yes {
+					cardLines = append(cardLines,
+						fmt.Sprintf("  ⚠  %-22s  %s", tc.Function, reason))
+				} else {
+					cardLines = append(cardLines,
+						fmt.Sprintf("  ·  %-22s  (safe)", tc.Function))
+				}
+			}
+			cardLines = append(cardLines, "")
+			cardLines = append(cardLines, "Press  Y  to approve all   ·   N  to deny all")
+
+			m.entries = append(m.entries, ChatEntry{
+				Role:    RoleApprovalRequest,
+				Content: strings.Join(cardLines, "\n"),
+			})
+			m.syncViewport()
+			break
+		}
+
+		// ── All tools are safe — execute immediately (existing behaviour) ─────
 		for _, tc := range msg.ToolCalls {
 			m.entries = append(m.entries, ChatEntry{
 				Role:    RoleTool,
 				Content: fmt.Sprintf("%s(%v)", tc.Function, formatArgs(tc.Args)),
 			})
-
 			m.llmHistory = append(m.llmHistory, llm.Message{
 				Role:    "assistant",
 				Content: "",
@@ -100,7 +191,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					{ID: tc.ID, Function: tc.Function, Arguments: tc.Args},
 				},
 			})
-
 			cmds = append(cmds, executeTool(m.dockerClient, tc))
 		}
 		m.syncViewport()

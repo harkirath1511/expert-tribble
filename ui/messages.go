@@ -8,6 +8,9 @@ const (
 	RoleAI
 	RoleTool
 	RoleError
+	RoleApprovalRequest // HITL: warning card shown before execution
+	RoleApprovalGiven   // HITL: user pressed Y
+	RoleApprovalDenied  // HITL: user pressed N
 )
 
 
