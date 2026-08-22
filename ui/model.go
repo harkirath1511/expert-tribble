@@ -12,47 +12,47 @@ import (
 	"github.com/moby/moby/client"
 )
 
-// Model is the root Bubble Tea model
+
 type Model struct {
-	// terminal dimensions
+	
 	width  int
 	height int
 
-	// sub-components
+	
 	viewport viewport.Model
 	input    textarea.Model
 	spinner  spinner.Model
 
-	// chat display history
+	
 	entries []ChatEntry
 
-	// AI conversation state
+	
 	llmHistory []llm.Message
 	toolsDef   []llm.ToolDef
 
-	// clients
+	
 	ai           *llm.GroqClient
 	dockerClient *client.Client
 
-	// flags
+	
 	thinking  bool
-	ready     bool   // viewport initialised?
-	statusMsg string // shown right-side of status bar
+	ready     bool   
+	statusMsg string 
 }
 
-// NewModel creates and wires up the initial model
+
 func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
-	// textarea — expandable, no border (we draw our own separator lines)
+	
 	ta := textarea.New()
 	ta.Placeholder = "Ask anything..."
 	ta.Focus()
 	ta.CharLimit = 2000
 	ta.ShowLineNumbers = false
-	ta.EndOfBufferCharacter = 0 // hide the ~ end-of-buffer marker
-	ta.SetHeight(1)             // starts at 1 line, grows with content
-	ta.MaxHeight = 6            // max 6 lines before it scrolls internally
+	ta.EndOfBufferCharacter = 0 
+	ta.SetHeight(1)             
+	ta.MaxHeight = 6            
 
-	// Strip bubble's default borders — we use separator lines in view.go instead
+	
 	noStyle := lipgloss.NewStyle()
 	ta.FocusedStyle.Base = noStyle
 	ta.FocusedStyle.CursorLine = noStyle
@@ -67,12 +67,12 @@ func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
 
 	ta.Prompt = "> "
 
-	// spinner — minimal dot, dim color
+	
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(colorDim)
 
-	// system message seeds the conversation
+	
 	history := []llm.Message{
 		{
 			Role:    "system",
@@ -91,7 +91,7 @@ func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
 	}
 }
 
-// Init is called once on startup — start the spinner tick
+
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		textarea.Blink,

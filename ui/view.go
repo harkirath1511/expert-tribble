@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// View renders the full terminal UI every frame
 func (m Model) View() string {
 	if !m.ready {
 		return "\n  Initialising...\n"
@@ -22,7 +21,6 @@ func (m Model) View() string {
 		sections = append(sections, m.renderThinking())
 	}
 
-	// input box: ─────────── / textarea / ───────────
 	sections = append(sections, sep)
 	sections = append(sections, m.renderInput())
 	sections = append(sections, sep)
@@ -30,8 +28,6 @@ func (m Model) View() string {
 
 	return strings.Join(sections, "\n")
 }
-
-// ── Sections ──────────────────────────────────────────────────────────────────
 
 func (m Model) renderViewport() string {
 	return ViewportStyle.Render(m.viewport.View())
@@ -61,9 +57,6 @@ func (m Model) renderStatus() string {
 	)
 }
 
-// ── Entry rendering ───────────────────────────────────────────────────────────
-
-// renderEntries converts all ChatEntry items into a single string for the viewport
 func (m Model) renderEntries() string {
 	if len(m.entries) == 0 {
 		return strings.Join([]string{
