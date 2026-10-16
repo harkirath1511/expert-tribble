@@ -46,7 +46,11 @@ func (m Model) renderInput() string {
 }
 
 func (m Model) renderStatus() string {
-	hint := StatusTextStyle.Render("? for shortcuts · ctrl+c to quit · enter to send · shift+enter for newline")
+	hintText := "? for shortcuts · enter to send · shift+enter for newline"
+	if m.quitPending {
+		hintText = "? for shortcuts · press ctrl+c again to quit · enter to send · shift+enter for newline"
+	}
+	hint := StatusTextStyle.Render(hintText)
 	provider := StatusTextStyle.Render(m.statusMsg)
 
 	hintW := lipgloss.Width(hint)
@@ -118,4 +122,3 @@ func renderEntry(e ChatEntry) string {
 		return e.Content + "\n"
 	}
 }
-

@@ -13,20 +13,30 @@ import (
 	"github.com/moby/moby/client"
 )
 
-
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 
-	
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m = m.recalcLayout()
 
-	
 	case tea.KeyMsg:
+		if msg.Type == tea.KeyCtrlC {
+			if m.quitPending {
+				return m, tea.Quit
+			}
+			m.quitPending = true
+			m.syncViewport()
+			return m, nil
+		}
+
+		if m.quitPending {
+			m.quitPending = false
+		}
+
 		// ── HITL approval mode — swallow all keys except Y and N ────────────
 		if m.awaitingApproval {
 			switch msg.String() {
@@ -73,9 +83,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// ── Normal input mode ────────────────────────────────────────────────
 		switch msg.Type {
 
-		case tea.KeyCtrlC:
-			return m, tea.Quit
-
 		case tea.KeyEnter:
 			text := strings.TrimSpace(m.input.Value())
 			if text == "" || m.thinking {
@@ -96,13 +103,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.syncViewport()
 		}
 
-	
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
 
-	
 	case docker.PingResultMsg:
 		if msg.Err != nil {
 			m.entries = append(m.entries, ChatEntry{
@@ -115,7 +120,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.syncViewport()
 
-	
 	case AIResponseMsg:
 		if msg.Text != "" {
 			// Final text reply from AI — show it and stop the loop
@@ -195,7 +199,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.syncViewport()
 
-	
 	case ToolResultMsg:
 		if msg.Err != nil {
 			m.entries = append(m.entries, ChatEntry{
@@ -224,10 +227,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.syncViewport()
 
-		
 		cmds = append(cmds, callAI(m.ai, m.llmHistory, m.toolsDef))
 
-	
 	case AIErrorMsg:
 		m.entries = append(m.entries, ChatEntry{
 			Role:    RoleError,
@@ -237,32 +238,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncViewport()
 	}
 
-	
 	var vpCmd, inputCmd tea.Cmd
 	m.viewport, vpCmd = m.viewport.Update(msg)
 	m.input, inputCmd = m.input.Update(msg)
 	cmds = append(cmds, vpCmd, inputCmd)
 
-	
 	m = m.recalcLayout()
 
 	return m, tea.Batch(cmds...)
 }
-
-
 
 func (m Model) recalcLayout() Model {
 	if m.width == 0 || m.height == 0 {
 		return m
 	}
 
-	
 	inputH := m.input.Height()
 	if inputH < 1 {
 		inputH = 1
 	}
 
-	
 	fixedH := 2 + 1 + 1 + 1
 	vpHeight := m.height - inputH - fixedH
 	if vpHeight < 1 {
@@ -282,12 +277,10 @@ func (m Model) recalcLayout() Model {
 	return m
 }
 
-
 func (m *Model) syncViewport() {
 	m.viewport.SetContent(m.renderEntries())
 	m.viewport.GotoBottom()
 }
-
 
 func formatArgs(args map[string]any) string {
 	if len(args) == 0 {
@@ -299,9 +292,6 @@ func formatArgs(args map[string]any) string {
 	}
 	return strings.Join(parts, ", ")
 }
-
-
-
 
 func callAI(ai *llm.GroqClient, history []llm.Message, toolsDef []llm.ToolDef) tea.Cmd {
 	return func() tea.Msg {
@@ -321,7 +311,6 @@ func callAI(ai *llm.GroqClient, history []llm.Message, toolsDef []llm.ToolDef) t
 		return msg
 	}
 }
-
 
 func executeTool(dockerClient *client.Client, tc ToolCallMsg) tea.Cmd {
 	return func() tea.Msg {
