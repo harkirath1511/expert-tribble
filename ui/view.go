@@ -99,6 +99,11 @@ func renderEntry(e ChatEntry) string {
 		}
 		return strings.Join(indented, "\n") + "\n\n"
 
+	case RoleThought:
+		prefix := ThoughtPrefixStyle.Render("💭 ")
+		msg := ThoughtStyle.Render(e.Content)
+		return fmt.Sprintf("  %s%s\n\n", prefix, msg)
+
 	case RoleTool:
 		prefix := ToolPrefixStyle.Render("  ⎿ ")
 		content := ToolResultStyle.Render(e.Content)

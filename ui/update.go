@@ -7,10 +7,11 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/harkirath1511/docker-cli/internal/agent"
 	"github.com/harkirath1511/docker-cli/internal/docker"
 	"github.com/harkirath1511/docker-cli/internal/llm"
 	"github.com/harkirath1511/docker-cli/internal/tools"
-	"github.com/moby/moby/client"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -49,14 +50,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Role:    RoleApprovalGiven,
 					Content: "Approved — executing...",
 				})
-				m.syncViewport()
 				for _, tc := range m.pendingToolCalls {
-					cmds = append(cmds, executeTool(m.dockerClient, tc))
+					m.entries = append(m.entries, ChatEntry{
+						Role:    RoleTool,
+						Content: fmt.Sprintf("%s(%v)", tc.Function, formatArgs(tc.Arguments)),
+					})
 				}
+				m.syncViewport()
+				cmds = append(cmds, executeToolsCmd(m.agent, m.pendingToolCalls))
 				m.pendingToolCalls = nil
 
 			case "n", "N", "esc":
-				// User denied — send a "denied" tool result back to AI for every call
+				// User denied — record denial into agent memory and continue loop
 				m.awaitingApproval = false
 				m.thinking = true
 				m.entries = append(m.entries, ChatEntry{
@@ -64,17 +69,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Content: "Denied — telling AI to stop.",
 				})
 				m.syncViewport()
-				for _, tc := range m.pendingToolCalls {
-					m.llmHistory = append(m.llmHistory, llm.Message{
-						Role:    "tool",
-						Content: "Action was denied by the user. Do not retry this operation.",
-						ToolCalls: []llm.ToolCall{
-							{ID: tc.ID},
-						},
-					})
-				}
+				m.agent.ApplyDenial(m.pendingToolCalls)
 				m.pendingToolCalls = nil
-				cmds = append(cmds, callAI(m.ai, m.llmHistory, m.toolsDef))
+				cmds = append(cmds, agentStepCmd(m.agent))
 			}
 			// swallow all other keys while awaiting approval
 			return m, tea.Batch(cmds...)
@@ -94,9 +91,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.entries = append(m.entries, ChatEntry{Role: RoleUser, Content: text})
 			m.syncViewport()
 
-			m.llmHistory = append(m.llmHistory, llm.Message{Role: "user", Content: text})
 			m.thinking = true
-			cmds = append(cmds, callAI(m.ai, m.llmHistory, m.toolsDef))
+			m.agent.StartNewGoal(text)
+			cmds = append(cmds, agentStepCmd(m.agent))
 
 		case tea.KeyCtrlL:
 			m.entries = nil
@@ -120,122 +117,110 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.syncViewport()
 
-	case AIResponseMsg:
-		if msg.Text != "" {
-			// Final text reply from AI — show it and stop the loop
-			m.entries = append(m.entries, ChatEntry{Role: RoleAI, Content: msg.Text})
-			m.llmHistory = append(m.llmHistory, llm.Message{Role: "assistant", Content: msg.Text})
-			m.thinking = false
-			m.syncViewport()
-			break
-		}
-
-		// ── Scan the entire batch for sensitive tools (Option B) ──────────────
-		var sensitiveLines []string
-		for _, tc := range msg.ToolCalls {
-			if reason, yes := tools.IsSensitive(tc.Function); yes {
-				sensitiveLines = append(sensitiveLines,
-					fmt.Sprintf("  ⚠  %-22s  %s", tc.Function, reason),
-				)
-			}
-		}
-
-		if len(sensitiveLines) > 0 {
-			// At least one tool is sensitive — pause the whole batch
-			m.awaitingApproval = true
-			m.thinking = false
-			m.pendingToolCalls = msg.ToolCalls
-
-			// First append all tool calls as assistant history so the
-			// conversation stays valid regardless of Y/N outcome
-			for _, tc := range msg.ToolCalls {
-				m.llmHistory = append(m.llmHistory, llm.Message{
-					Role:    "assistant",
-					Content: "",
-					ToolCalls: []llm.ToolCall{
-						{ID: tc.ID, Function: tc.Function, Arguments: tc.Args},
-					},
-				})
-			}
-
-			// Build the approval card content
-			var cardLines []string
-			cardLines = append(cardLines, "AI wants to run the following operations:")
-			cardLines = append(cardLines, "")
-			for _, tc := range msg.ToolCalls {
-				if reason, yes := tools.IsSensitive(tc.Function); yes {
-					cardLines = append(cardLines,
-						fmt.Sprintf("  ⚠  %-22s  %s", tc.Function, reason))
-				} else {
-					cardLines = append(cardLines,
-						fmt.Sprintf("  ·  %-22s  (safe)", tc.Function))
-				}
-			}
-			cardLines = append(cardLines, "")
-			cardLines = append(cardLines, "Press  Y  to approve all   ·   N  to deny all")
-
-			m.entries = append(m.entries, ChatEntry{
-				Role:    RoleApprovalRequest,
-				Content: strings.Join(cardLines, "\n"),
-			})
-			m.syncViewport()
-			break
-		}
-
-		// ── All tools are safe — execute immediately (existing behaviour) ─────
-		for _, tc := range msg.ToolCalls {
-			m.entries = append(m.entries, ChatEntry{
-				Role:    RoleTool,
-				Content: fmt.Sprintf("%s(%v)", tc.Function, formatArgs(tc.Args)),
-			})
-			m.llmHistory = append(m.llmHistory, llm.Message{
-				Role:    "assistant",
-				Content: "",
-				ToolCalls: []llm.ToolCall{
-					{ID: tc.ID, Function: tc.Function, Arguments: tc.Args},
-				},
-			})
-			cmds = append(cmds, executeTool(m.dockerClient, tc))
-		}
-		m.syncViewport()
-
-	case ToolResultMsg:
-		if msg.Err != nil {
+	case agent.StepResult:
+		if msg.Error != nil {
 			m.entries = append(m.entries, ChatEntry{
 				Role:    RoleError,
-				Content: fmt.Sprintf("%s failed: %v", msg.Function, msg.Err),
+				Content: fmt.Sprintf("Error: %v", msg.Error),
 			})
-			m.llmHistory = append(m.llmHistory, llm.Message{
-				Role:    "tool",
-				Content: fmt.Sprintf("error: %v", msg.Err),
-				ToolCalls: []llm.ToolCall{
-					{ID: msg.ToolCallID},
-				},
-			})
-		} else {
+			m.thinking = false
+			m.syncViewport()
+			break
+		}
+
+		// Display agent reasoning thought if present
+		if msg.Thought != "" {
 			m.entries = append(m.entries, ChatEntry{
-				Role:    RoleTool,
-				Content: msg.Result,
+				Role:    RoleThought,
+				Content: fmt.Sprintf("[Step %d] %s", msg.StepNumber, msg.Thought),
 			})
-			m.llmHistory = append(m.llmHistory, llm.Message{
-				Role:    "tool",
-				Content: msg.Result,
-				ToolCalls: []llm.ToolCall{
-					{ID: msg.ToolCallID},
-				},
-			})
+			m.syncViewport()
+		}
+
+		// Goal accomplished
+		if msg.IsDone {
+			if msg.FinalText != "" {
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleAI,
+					Content: msg.FinalText,
+				})
+			}
+			m.thinking = false
+			m.syncViewport()
+			break
+		}
+
+		// Process tool calls requested by the agent
+		if len(msg.ToolCalls) > 0 {
+			// Scan for sensitive tools requiring HITL approval
+			var sensitiveLines []string
+			for _, tc := range msg.ToolCalls {
+				if reason, yes := tools.IsSensitive(tc.Function); yes {
+					sensitiveLines = append(sensitiveLines,
+						fmt.Sprintf("  ⚠  %-22s  %s", tc.Function, reason),
+					)
+				}
+			}
+
+			if len(sensitiveLines) > 0 {
+				m.awaitingApproval = true
+				m.thinking = false
+				m.pendingToolCalls = msg.ToolCalls
+
+				var cardLines []string
+				cardLines = append(cardLines, "AI wants to run the following operations:")
+				cardLines = append(cardLines, "")
+				for _, tc := range msg.ToolCalls {
+					if reason, yes := tools.IsSensitive(tc.Function); yes {
+						cardLines = append(cardLines,
+							fmt.Sprintf("  ⚠  %-22s  %s", tc.Function, reason))
+					} else {
+						cardLines = append(cardLines,
+							fmt.Sprintf("  ·  %-22s  (safe)", tc.Function))
+					}
+				}
+				cardLines = append(cardLines, "")
+				cardLines = append(cardLines, "Press  Y  to approve all   ·   N  to deny all")
+
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleApprovalRequest,
+					Content: strings.Join(cardLines, "\n"),
+				})
+				m.syncViewport()
+				break
+			}
+
+			// Safe tools — execute immediately
+			for _, tc := range msg.ToolCalls {
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleTool,
+					Content: fmt.Sprintf("%s(%v)", tc.Function, formatArgs(tc.Arguments)),
+				})
+			}
+			m.syncViewport()
+			cmds = append(cmds, executeToolsCmd(m.agent, msg.ToolCalls))
+		}
+
+	case agent.BatchToolExecutionResult:
+		for _, res := range msg.Results {
+			if res.Error != nil {
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleError,
+					Content: fmt.Sprintf("%s failed: %v", res.Function, res.Error),
+				})
+			} else {
+				m.entries = append(m.entries, ChatEntry{
+					Role:    RoleTool,
+					Content: res.Result,
+				})
+			}
+			// Feed observation back into the agent
+			m.agent.ApplyObservation(res)
 		}
 		m.syncViewport()
 
-		cmds = append(cmds, callAI(m.ai, m.llmHistory, m.toolsDef))
-
-	case AIErrorMsg:
-		m.entries = append(m.entries, ChatEntry{
-			Role:    RoleError,
-			Content: fmt.Sprintf("AI error: %v", msg.Err),
-		})
-		m.thinking = false
-		m.syncViewport()
+		// Continue the ReAct loop
+		cmds = append(cmds, agentStepCmd(m.agent))
 	}
 
 	var vpCmd, inputCmd tea.Cmd
@@ -265,20 +250,35 @@ func (m Model) recalcLayout() Model {
 	}
 
 	if !m.ready {
-		m.viewport = viewport.New(m.width, vpHeight)
-		m.viewport.SetContent(m.renderEntries())
+		m.viewport = viewport.New(maxContentWidth(m.width), vpHeight)
 		m.ready = true
 	} else {
-		m.viewport.Width = m.width
+		m.viewport.Width = maxContentWidth(m.width)
 		m.viewport.Height = vpHeight
 	}
 
 	m.input.SetWidth(m.width - 2)
+	m.viewport.SetContent(lipgloss.NewStyle().
+		Width(m.viewport.Width).
+		Render(m.renderEntries()))
 	return m
 }
 
+func maxContentWidth(width int) int {
+	contentWidth := width - 2
+	if contentWidth < 1 {
+		return 1
+	}
+	return contentWidth
+}
+
 func (m *Model) syncViewport() {
-	m.viewport.SetContent(m.renderEntries())
+	contentWidth := m.viewport.Width
+	if contentWidth < 1 {
+		contentWidth = 1
+	}
+	content := lipgloss.NewStyle().Width(contentWidth).Render(m.renderEntries())
+	m.viewport.SetContent(content)
 	m.viewport.GotoBottom()
 }
 
@@ -293,33 +293,14 @@ func formatArgs(args map[string]any) string {
 	return strings.Join(parts, ", ")
 }
 
-func callAI(ai *llm.GroqClient, history []llm.Message, toolsDef []llm.ToolDef) tea.Cmd {
+func agentStepCmd(ag *agent.Agent) tea.Cmd {
 	return func() tea.Msg {
-		resp, err := ai.GenerateResponse(history, toolsDef)
-		if err != nil {
-			return AIErrorMsg{Err: err}
-		}
-
-		msg := AIResponseMsg{Text: resp.Text}
-		for _, tc := range resp.ToolCalls {
-			msg.ToolCalls = append(msg.ToolCalls, ToolCallMsg{
-				ID:       tc.ID,
-				Function: tc.Function,
-				Args:     tc.Arguments,
-			})
-		}
-		return msg
+		return ag.NextStep()
 	}
 }
 
-func executeTool(dockerClient *client.Client, tc ToolCallMsg) tea.Cmd {
+func executeToolsCmd(ag *agent.Agent, tcs []llm.ToolCall) tea.Cmd {
 	return func() tea.Msg {
-		result, err := docker.Execute(dockerClient, tc.Function, tc.Args)
-		return ToolResultMsg{
-			ToolCallID: tc.ID,
-			Function:   tc.Function,
-			Result:     result,
-			Err:        err,
-		}
+		return ag.ExecuteTools(tcs)
 	}
 }

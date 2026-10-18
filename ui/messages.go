@@ -1,11 +1,11 @@
 package ui
 
-
 type ChatRole int
 
 const (
 	RoleUser ChatRole = iota
 	RoleAI
+	RoleThought
 	RoleTool
 	RoleError
 	RoleApprovalRequest // HITL: warning card shown before execution
@@ -13,20 +13,15 @@ const (
 	RoleApprovalDenied  // HITL: user pressed N
 )
 
-
 type ChatEntry struct {
 	Role    ChatRole
-	Content string 
+	Content string
 }
-
-
-
 
 type AIResponseMsg struct {
 	Text      string
 	ToolCalls []ToolCallMsg
 }
-
 
 type ToolCallMsg struct {
 	ID       string
@@ -34,14 +29,12 @@ type ToolCallMsg struct {
 	Args     map[string]any
 }
 
-
 type ToolResultMsg struct {
 	ToolCallID string
 	Function   string
 	Result     string
 	Err        error
 }
-
 
 type AIErrorMsg struct {
 	Err error

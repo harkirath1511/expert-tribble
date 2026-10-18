@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/harkirath1511/docker-cli/internal/agent"
 	"github.com/harkirath1511/docker-cli/internal/docker"
 	"github.com/harkirath1511/docker-cli/internal/llm"
 	"github.com/harkirath1511/docker-cli/internal/tools"
@@ -22,10 +23,7 @@ type Model struct {
 
 	entries []ChatEntry
 
-	llmHistory []llm.Message
-	toolsDef   []llm.ToolDef
-
-	ai           *llm.GroqClient
+	agent        *agent.Agent
 	dockerClient *client.Client
 
 	// flags
@@ -36,10 +34,10 @@ type Model struct {
 
 	// HITL state
 	awaitingApproval bool
-	pendingToolCalls []ToolCallMsg // entire batch held until user decides
+	pendingToolCalls []llm.ToolCall // entire batch held until user decides
 }
 
-func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
+func NewModel(dockerClient *client.Client, ai llm.LLMClient) Model {
 
 	ta := textarea.New()
 	ta.Placeholder = "Ask anything..."
@@ -68,20 +66,13 @@ func NewModel(dockerClient *client.Client, ai *llm.GroqClient) Model {
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(colorDim)
 
-	history := []llm.Message{
-		{
-			Role:    "system",
-			Content: "You are a Docker assistant that helps users manage Docker containers and images. Use the provided tools to interact with Docker. Always use tool calls (function calls) to perform Docker operations - never write out function calls as text or XML. When a task is complete, provide a brief summary to the user.",
-		},
-	}
+	ag := agent.NewAgent(dockerClient, ai, tools.GetToolDefs())
 
 	return Model{
 		input:        ta,
 		spinner:      sp,
-		ai:           ai,
+		agent:        ag,
 		dockerClient: dockerClient,
-		llmHistory:   history,
-		toolsDef:     tools.GetToolDefs(),
 		statusMsg:    "Groq · llama-3.3-70b",
 	}
 }

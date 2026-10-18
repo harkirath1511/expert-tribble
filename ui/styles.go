@@ -25,6 +25,13 @@ var (
 	AIMsgStyle = lipgloss.NewStyle().
 			Foreground(colorText)
 
+	ThoughtPrefixStyle = lipgloss.NewStyle().
+			Foreground(colorAccent)
+
+	ThoughtStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#9CA3AF")).
+			Italic(true)
+
 	
 	ToolPrefixStyle = lipgloss.NewStyle().
 			Foreground(colorDim)
